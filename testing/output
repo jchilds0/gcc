@@ -1,0 +1,13 @@
+i = i + 1
+t1 = a[i]
+if t1 < v goto 1
+j = j - 1
+t2 = a[j]
+if t2 > v goto 4
+ifFalse i >= j goto 9
+goto 14
+x = a[i]
+t3 = a[j]
+a[i] = t3
+a[j] = x
+goto 1

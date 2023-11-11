@@ -1,2 +1,6 @@
 # gcc
-C compiler written in Golang
+**G**olang **C** **C**ompiler, a C compiler written in Golang
+
+## Setup
+
+TODO
