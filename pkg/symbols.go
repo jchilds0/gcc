@@ -1,4 +1,4 @@
-package dragonbook
+package pkg
 
 import (
 	"errors"
@@ -6,15 +6,19 @@ import (
 )
 
 type Env struct {
-	table  map[string]*TokenInterface
+	table  map[string]*Id
 	parent *Env
 }
 
-func (env *Env) Put(s string, sym *TokenInterface) {
-	env.table[s] = sym
+func NewEnv(parent *Env) *Env {
+	return &Env{parent: parent, table: map[string]*Id{}}
 }
 
-func (env *Env) Get(s string) (*TokenInterface, error) {
+func (env *Env) Put(s string, id *Id) {
+	env.table[s] = id
+}
+
+func (env *Env) Get(s string) (*Id, error) {
 	for e := env; e != nil; e = e.parent {
 		found := e.table[s]
 		if found != nil {

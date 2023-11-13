@@ -1,8 +1,8 @@
-package dragonbook
+package pkg
 
 import "strconv"
 
-type TokenInterface interface {
+type Tokener interface {
 	GetTokenTag() int
 	String() string
 }
@@ -45,17 +45,21 @@ func NewWord(tag int, s string) (word *Word) {
 	return &Word{Token: Token{tag: tag}, lexeme: s}
 }
 
-var And = NewWord(AND, "&&")
-var Or = NewWord(OR, "&&")
-var Eq = NewWord(EQ, "&&")
-var Ne = NewWord(NE, "&&")
-var Le = NewWord(LE, "&&")
-var Ge = NewWord(GE, "&&")
+func (word *Word) String() string {
+	return word.lexeme
+}
 
-// var Minus = NewWord(MINUS, "&&")
-var WordTrue = NewWord(TRUE, "&&")
-var WordFalse = NewWord(FALSE, "&&")
-var WordTemp = NewWord(TEMP, "&&")
+var WordAnd = NewWord(AND, "&&")
+var WordOr = NewWord(OR, "||")
+var WordEq = NewWord(EQ, "==")
+var WordNe = NewWord(NE, "!=")
+var WordLe = NewWord(LE, "<=")
+var WordGe = NewWord(GE, ">=")
+
+var WordMinus = NewWord(MINUS, "minus")
+var WordTrue = NewWord(TRUE, "true")
+var WordFalse = NewWord(FALSE, "false")
+var WordTemp = NewWord(TEMP, "t")
 
 type Real struct {
 	Token
@@ -68,6 +72,12 @@ func NewReal(v float64) *Real {
 
 func (r *Real) String() string {
 	return strconv.FormatFloat(r.value, 'f', -1, 64)
+}
+
+type Typer interface {
+	Tokener
+	GetWidth() int
+	Numeric() bool
 }
 
 type Type struct {
@@ -84,12 +94,20 @@ var Float = NewType(BASIC, "float", 8)
 var Char = NewType(BASIC, "char", 1)
 var Bool = NewType(BASIC, "bool", 1)
 
-func (t *Type) numeric() bool {
-	return t == Int || t == Float || t == Char
+func (t *Type) Numeric() bool {
+	Tint := t.lexeme == Int.lexeme && t.width == Int.width
+	Tfloat := t.lexeme == Float.lexeme && t.width == Float.width
+	Tchar := t.lexeme == Float.lexeme && t.width == Char.width
+
+	return Tint || Tfloat || Tchar
 }
 
-func max(p1 *Type, p2 *Type) *Type {
-	if !p1.numeric() || !p2.numeric() {
+func (t *Type) GetWidth() int {
+	return t.width
+}
+
+func max(p1 Typer, p2 Typer) *Type {
+	if !p1.Numeric() || !p2.Numeric() {
 		return nil
 	} else if p1 == Float || p2 == Float {
 		return Float
@@ -100,16 +118,25 @@ func max(p1 *Type, p2 *Type) *Type {
 	}
 }
 
+type Arrayer interface {
+	Typer
+	GetType() Typer
+}
+
 type Array struct {
 	Type
 	size int
-	of   *Type
+	of   Typer
 }
 
-func NewArray(sz int, p *Type) *Array {
-	return &Array{Type: *NewType(INDEX, "[]", sz*p.width), size: sz, of: p}
+func NewArray(sz int, p Typer) *Array {
+	return &Array{Type: *NewType(INDEX, "[]", sz*p.GetWidth()), size: sz, of: p}
 }
 
 func (array *Array) String() string {
 	return "[" + string(array.size) + "] " + array.of.String()
+}
+
+func (array *Array) GetType() Typer {
+	return array.of
 }

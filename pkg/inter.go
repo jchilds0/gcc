@@ -1,4 +1,4 @@
-package dragonbook
+package pkg
 
 import (
 	"fmt"

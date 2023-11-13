@@ -4,7 +4,7 @@
 	Translates infix to postfix using recursive descent parsing
 */
 
-package dragonbook
+package main
 
 import (
 	"bufio"

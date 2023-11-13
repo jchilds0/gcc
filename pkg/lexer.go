@@ -1,9 +1,8 @@
-package dragonbook
+package pkg
 
 import (
 	"bufio"
 	"log"
-	"os"
 	"unicode"
 )
 
@@ -34,34 +33,31 @@ type Lexer struct {
 	line   int
 	peek   rune
 	reader *bufio.Reader
-	words  map[string]*Word
+	words  map[string]Tokener
 }
 
-func NewLexer() (lexer *Lexer) {
-	lexer = new(Lexer)
-	lexer.line = 1
-	lexer.peek = ' '
-	lexer.reader = bufio.NewReader(os.Stdin)
+func NewLexer(reader *bufio.Reader) (lexer *Lexer) {
+	lexer = &Lexer{line: 1, peek: ' ', reader: reader, words: map[string]Tokener{}}
 
 	// reserve words in the hash table
+	lexer.reserve(WordTrue)
+	lexer.reserve(WordFalse)
+
+	lexer.reserve(Int)
+	lexer.reserve(Float)
+	lexer.reserve(Char)
+	lexer.reserve(Bool)
+
 	lexer.reserve(NewWord(IF, "if"))
 	lexer.reserve(NewWord(ELSE, "else"))
 	lexer.reserve(NewWord(WHILE, "while"))
 	lexer.reserve(NewWord(DO, "do"))
 	lexer.reserve(NewWord(BREAK, "break"))
-
-	lexer.reserve(True)
-	lexer.reserve(False)
-
-	lexer.reserve(&Int.Word)
-	lexer.reserve(&Float.Word)
-	lexer.reserve(&Char.Word)
-	lexer.reserve(&Bool.Word)
 	return
 }
 
-func (lexer *Lexer) reserve(t *Word) {
-	lexer.words[t.lexeme] = t
+func (lexer *Lexer) reserve(t Tokener) {
+	lexer.words[t.String()] = t
 }
 
 func (lexer *Lexer) readch(b ...rune) bool {
@@ -75,63 +71,62 @@ func (lexer *Lexer) readch(b ...rune) bool {
 	} else {
 		_ = lexer.readch()
 		if lexer.peek != b[0] {
-			lexer.peek = ' '
 			return false
 		}
+		lexer.peek = ' '
 	}
 
 	return true
 }
 
-func (lexer *Lexer) Scan() TokenInterface {
+func (lexer *Lexer) Scan() Tokener {
 WS:
 	for {
-		lexer.readch()
-
 		switch lexer.peek {
-		case ' ':
-		case '\t':
+		case ' ', '\t', '\r':
 		case '\n':
 			lexer.line++
 		default:
 			break WS
 		}
+
+		lexer.readch()
 	}
 
 	switch lexer.peek {
 	case '&':
 		if lexer.readch('&') {
-			return And
+			return WordAnd
 		} else {
 			return NewToken('&')
 		}
 	case '|':
 		if lexer.readch('|') {
-			return Or
+			return WordOr
 		} else {
 			return NewToken('|')
 		}
 	case '=':
 		if lexer.readch('=') {
-			return Eq
+			return WordEq
 		} else {
 			return NewToken('=')
 		}
 	case '!':
 		if lexer.readch('=') {
-			return Ne
+			return WordNe
 		} else {
 			return NewToken('!')
 		}
 	case '<':
 		if lexer.readch('=') {
-			return Le
+			return WordLe
 		} else {
 			return NewToken('<')
 		}
 	case '>':
 		if lexer.readch('=') {
-			return Ge
+			return WordGe
 		} else {
 			return NewToken('>')
 		}
@@ -209,9 +204,9 @@ WS:
 		}
 
 		s := string(b)
-		w := lexer.words[s]
+		w, ok := lexer.words[s]
 
-		if w == nil {
+		if ok == false {
 			w = NewWord(ID, s)
 			lexer.words[s] = w
 		}
