@@ -1,11 +1,13 @@
-package internal
+package parser
 
 import (
 	"fmt"
+	"io"
 	"log"
 )
 
 var NodeLabels = 0
+var NodeWrite io.Writer
 
 type Node struct {
 	lexline int
@@ -25,9 +27,15 @@ func (node *Node) NewLabel() int {
 }
 
 func (node *Node) EmitLabel(i int) {
-	fmt.Printf("L%d:", i)
+	_, err := NodeWrite.Write([]byte(fmt.Sprintf("L%d:", i)))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (node *Node) Emit(s string) {
-	fmt.Printf("\t%s\n", s)
+	_, err := NodeWrite.Write([]byte(fmt.Sprintf("\t%s\n", s)))
+	if err != nil {
+		log.Fatal(err)
+	}
 }

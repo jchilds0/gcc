@@ -1,24 +1,25 @@
-package internal
+package parser
 
 import (
 	"fmt"
+	"gcc/lexer"
 )
 
 type Exprer interface {
 	Gen() Exprer
 	Reduce(Exprer) Exprer
 	String() string
-	Type() Typer
+	Type() lexer.Typer
 	Jumping(t, f int)
 }
 
 type Expr struct {
 	Node
-	op Tokener
-	t  Typer
+	op lexer.Tokener
+	t  lexer.Typer
 }
 
-func NewExpr(tok Tokener, p Typer) *Expr {
+func NewExpr(tok lexer.Tokener, p lexer.Typer) *Expr {
 	return &Expr{Node: *NewNode(), op: tok, t: p}
 }
 
@@ -41,7 +42,7 @@ func (expr *Expr) emitJumps(test string, t int, f int) {
 	} else if t != 0 {
 		expr.Emit(fmt.Sprintf("if %s goto L%d", test, t))
 	} else if f != 0 {
-		expr.Emit(fmt.Sprintf("iffalse %s goto L%d", test, t))
+		expr.Emit(fmt.Sprintf("iffalse %s goto L%d", test, f))
 	}
 }
 
@@ -49,7 +50,7 @@ func (expr *Expr) String() string {
 	return expr.op.String()
 }
 
-func (expr *Expr) Type() Typer {
+func (expr *Expr) Type() lexer.Typer {
 	return expr.t
 }
 
@@ -58,7 +59,7 @@ type Id struct {
 	offset int
 }
 
-func NewId(id *Word, p Typer, b int) *Id {
+func NewId(id *lexer.Word, p lexer.Typer, b int) *Id {
 	return &Id{Expr: *NewExpr(id, p), offset: b}
 }
 
@@ -69,8 +70,8 @@ type Temp struct {
 	number int
 }
 
-func NewTemp(p Typer) *Temp {
-	temp := &Temp{Expr: *NewExpr(WordTemp, p)}
+func NewTemp(p lexer.Typer) *Temp {
+	temp := &Temp{Expr: *NewExpr(lexer.WordTemp, p)}
 	TempCount++
 	temp.number = TempCount
 	return temp
@@ -84,16 +85,16 @@ type Constant struct {
 	Expr
 }
 
-func NewConstant(tok Tokener, p *Type) *Constant {
+func NewConstant(tok lexer.Tokener, p *lexer.Type) *Constant {
 	return &Constant{Expr: *NewExpr(tok, p)}
 }
 
 func NewConstantInt(i int) *Constant {
-	return &Constant{Expr: *NewExpr(NewNum(i), Int)}
+	return &Constant{Expr: *NewExpr(lexer.NewNum(i), lexer.Int)}
 }
 
-var ConstantTrue = NewConstant(WordTrue, Bool)
-var ConstantFalse = NewConstant(WordFalse, Bool)
+var ConstantTrue = NewConstant(lexer.WordTrue, lexer.Bool)
+var ConstantFalse = NewConstant(lexer.WordFalse, lexer.Bool)
 
 func (cons *Constant) Jumping(t int, f int) {
 	if cons == ConstantTrue && t != 0 {

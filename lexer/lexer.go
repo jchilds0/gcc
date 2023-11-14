@@ -1,4 +1,4 @@
-package internal
+package lexer
 
 import (
 	"bufio"
@@ -32,14 +32,14 @@ const (
 )
 
 type Lexer struct {
-	line   int
+	Line   int
 	peek   rune
 	reader *bufio.Reader
 	words  map[string]Tokener
 }
 
 func NewLexer(read *bufio.Reader) (lexer *Lexer) {
-	lexer = &Lexer{line: 1, peek: ' ', reader: read, words: map[string]Tokener{}}
+	lexer = &Lexer{Line: 1, peek: ' ', reader: read, words: map[string]Tokener{}}
 
 	// reserve words in the hash table
 	lexer.reserve(WordTrue)
@@ -89,7 +89,7 @@ WS:
 		switch lexer.peek {
 		case ' ', '\t', '\r':
 		case '\n':
-			lexer.line++
+			lexer.Line++
 		case EOF:
 			return nil
 		default:

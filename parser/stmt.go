@@ -1,6 +1,9 @@
-package internal
+package parser
 
-import "fmt"
+import (
+	"fmt"
+	"gcc/lexer"
+)
 
 type Stmt struct {
 	Node
@@ -10,6 +13,7 @@ type Stmt struct {
 type Stmter interface {
 	Gen(b, a int)
 	GetNode() *Node
+	GetAfter() int
 }
 
 var StmtNull Stmter
@@ -17,9 +21,9 @@ var StmtEnclosing Stmter
 
 func (stmt *Stmt) Gen(b, a int) {}
 
-func (stmt *Stmt) GetNode() *Node {
-	return &stmt.Node
-}
+func (stmt *Stmt) GetNode() *Node { return &stmt.Node }
+
+func (stmt *Stmt) GetAfter() int { return stmt.after }
 
 type If struct {
 	Stmt
@@ -29,7 +33,7 @@ type If struct {
 
 func NewIf(x Exprer, s Stmter) *If {
 	iff := &If{expr: x, stmt: s}
-	if x.Type() != Bool {
+	if x.Type() != lexer.Bool {
 		iff.Error("boolean is required in if")
 	}
 
@@ -52,7 +56,7 @@ type Else struct {
 
 func NewElse(x Exprer, s1 Stmter, s2 Stmter) *Else {
 	el := &Else{expr: x, stmt1: s1, stmt2: s2}
-	if x.Type() == Bool {
+	if x.Type() == lexer.Bool {
 		el.Error("boolean required in if")
 	}
 
@@ -79,7 +83,7 @@ type While struct {
 }
 
 func (wh *While) Init(x Exprer, s Stmter) {
-	if x.Type() != Bool {
+	if x.Type() != lexer.Bool {
 		wh.Error("boolean required in while")
 	}
 	wh.expr = x
@@ -102,7 +106,7 @@ type Do struct {
 }
 
 func (do *Do) Init(s Stmter, x Exprer) {
-	if x.Type() != Bool {
+	if x.Type() != lexer.Bool {
 		do.Error("boolean required in do")
 	}
 
@@ -133,10 +137,10 @@ func NewSet(i *Id, x Exprer) *Set {
 	return set
 }
 
-func (_ *Set) check(p1 Typer, p2 Typer) Typer {
+func (_ *Set) check(p1 lexer.Typer, p2 lexer.Typer) lexer.Typer {
 	if p1.Numeric() && p2.Numeric() {
 		return p2
-	} else if p1.String() == Bool.String() && p2.String() == Bool.String() {
+	} else if p1.String() == lexer.Bool.String() && p2.String() == lexer.Bool.String() {
 		return p2
 	} else {
 		return nil
@@ -163,9 +167,9 @@ func NewSetElem(x Accesser, y Exprer) *SetElem {
 	return setElem
 }
 
-func (_ *SetElem) check(p1 Typer, p2 Typer) Typer {
-	_, ok1 := p1.(Arrayer)
-	_, ok2 := p2.(Arrayer)
+func (_ *SetElem) check(p1 lexer.Typer, p2 lexer.Typer) lexer.Typer {
+	_, ok1 := p1.(lexer.Arrayer)
+	_, ok2 := p2.(lexer.Arrayer)
 	if ok1 || ok2 {
 		return nil
 	} else if p1.String() == p2.String() {
@@ -221,5 +225,5 @@ func NewBreak() *Break {
 }
 
 func (br *Break) Gen(b, a int) {
-	br.Emit(fmt.Sprintf("goto L%d", br.after))
+	br.Emit(fmt.Sprintf("goto L%d", br.stmt.GetAfter()))
 }

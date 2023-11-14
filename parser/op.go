@@ -1,6 +1,9 @@
-package internal
+package parser
 
-import "fmt"
+import (
+	"fmt"
+	"gcc/lexer"
+)
 
 type Op struct {
 	Expr
@@ -19,9 +22,9 @@ type Arith struct {
 	expr2 Exprer
 }
 
-func NewArith(tok Tokener, x1 Exprer, x2 Exprer) *Arith {
-	arith := new(Arith)
-	t := max(x1.Type(), x2.Type())
+func NewArith(tok lexer.Tokener, x1 Exprer, x2 Exprer) *Arith {
+	arith := &Arith{expr1: x1, expr2: x2}
+	t := lexer.Max(x1.Type(), x2.Type())
 
 	if t == nil {
 		arith.Error("type error")
@@ -29,8 +32,6 @@ func NewArith(tok Tokener, x1 Exprer, x2 Exprer) *Arith {
 
 	arith.op = tok
 	arith.t = t
-	arith.expr1 = x1
-	arith.expr2 = x2
 	return arith
 }
 
@@ -47,8 +48,8 @@ type Unary struct {
 	expr Exprer
 }
 
-func NewUnary(tok Tokener, x Exprer) (un *Unary) {
-	t := max(Int, x.Type())
+func NewUnary(tok lexer.Tokener, x Exprer) (un *Unary) {
+	t := lexer.Max(lexer.Int, x.Type())
 	if t == nil {
 		un.Error("type error")
 	}
@@ -78,9 +79,9 @@ type Access struct {
 	index Exprer
 }
 
-func NewAccess(a *Id, i Exprer, p Typer) *Access {
+func NewAccess(a *Id, i Exprer, p lexer.Typer) *Access {
 	return &Access{
-		Op:    Op{Expr: *NewExpr(NewWord(INDEX, "[]"), p)},
+		Op:    Op{Expr: *NewExpr(lexer.NewWord(lexer.INDEX, "[]"), p)},
 		array: *a,
 		index: i,
 	}

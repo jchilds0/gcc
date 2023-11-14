@@ -1,23 +1,24 @@
-package internal
+package parser
 
 import (
-	"bufio"
 	"fmt"
+	"gcc/lexer"
+	"io"
 	"log"
 )
 
 type Parser struct {
-	lex  *Lexer
-	look Tokener
+	lex  *lexer.Lexer
+	look lexer.Tokener
 	top  *Env
 	used int
-	w    *bufio.Writer
 }
 
-func NewParser(lexer *Lexer, write *bufio.Writer) *Parser {
+func NewParser(lexer *lexer.Lexer, write io.Writer) *Parser {
 	parser := &Parser{lex: lexer}
 	parser.move()
 	parser.top = NewEnv(nil)
+	NodeWrite = write
 
 	return parser
 }
@@ -27,7 +28,7 @@ func (parser *Parser) move() {
 }
 
 func (parser *Parser) error(s string) {
-	log.Fatalf("near line %d: %s", parser.lex.line, s)
+	log.Fatalf("near line %d: %s", parser.lex.Line, s)
 }
 
 func (parser *Parser) match(t int) {
@@ -62,20 +63,20 @@ func (parser *Parser) block() Stmter {
 }
 
 func (parser *Parser) decls() {
-	for parser.look.GetTokenTag() == BASIC {
+	for parser.look.GetTokenTag() == lexer.BASIC {
 		p := parser.types()
 		tok := parser.look
-		parser.match(ID)
+		parser.match(lexer.ID)
 		parser.match(';')
-		id := NewId(NewWord(tok.GetTokenTag(), tok.String()), p, parser.used)
+		id := NewId(lexer.NewWord(tok.GetTokenTag(), tok.String()), p, parser.used)
 		parser.top.Put(tok.String(), id)
 		parser.used += p.GetWidth()
 	}
 }
 
-func (parser *Parser) types() Typer {
-	p := NewType(parser.look.GetTokenTag(), parser.look.String(), parser.look.(Typer).GetWidth())
-	parser.match(BASIC)
+func (parser *Parser) types() lexer.Typer {
+	p := lexer.NewType(parser.look.GetTokenTag(), parser.look.String(), parser.look.(lexer.Typer).GetWidth())
+	parser.match(lexer.BASIC)
 	if parser.look.GetTokenTag() != '[' {
 		return p
 	} else {
@@ -83,16 +84,16 @@ func (parser *Parser) types() Typer {
 	}
 }
 
-func (parser *Parser) dims(p Typer) Typer {
+func (parser *Parser) dims(p lexer.Typer) lexer.Typer {
 	parser.match('[')
-	parser.match(NUM)
+	parser.match(lexer.NUM)
 	parser.match(']')
 
 	if parser.look.GetTokenTag() == '[' {
 		p = parser.dims(p)
 	}
 
-	return NewArray(0, p)
+	return lexer.NewArray(0, p)
 }
 
 func (parser *Parser) stmts() Stmter {
@@ -111,24 +112,24 @@ func (parser *Parser) stmt() Stmter {
 	case ';':
 		parser.move()
 		return StmtNull
-	case IF:
-		parser.match(IF)
+	case lexer.IF:
+		parser.match(lexer.IF)
 		parser.match('(')
 		x = parser.bool()
 		parser.match(')')
 		s1 = parser.stmt()
-		if parser.look.GetTokenTag() != ELSE {
+		if parser.look.GetTokenTag() != lexer.ELSE {
 			return NewIf(x, s1)
 		} else {
-			parser.match(ELSE)
+			parser.match(lexer.ELSE)
 			s2 = parser.stmt()
 			return NewElse(x, s1, s2)
 		}
-	case WHILE:
+	case lexer.WHILE:
 		whilenode := new(While)
 		savedStmt := StmtEnclosing
 		StmtEnclosing = Stmter(whilenode)
-		parser.match(WHILE)
+		parser.match(lexer.WHILE)
 		parser.match('(')
 		x = parser.bool()
 		parser.match(')')
@@ -136,13 +137,13 @@ func (parser *Parser) stmt() Stmter {
 		whilenode.Init(x, s1)
 		StmtEnclosing = savedStmt
 		return whilenode
-	case DO:
+	case lexer.DO:
 		donode := new(Do)
 		savedStmt := StmtEnclosing
 		StmtEnclosing = donode.stmt
-		parser.match(DO)
+		parser.match(lexer.DO)
 		s1 := parser.stmt()
-		parser.match(WHILE)
+		parser.match(lexer.WHILE)
 		parser.match('(')
 		x := parser.bool()
 		parser.match(')')
@@ -150,8 +151,8 @@ func (parser *Parser) stmt() Stmter {
 		donode.Init(s1, x)
 		StmtEnclosing = savedStmt
 		return donode
-	case BREAK:
-		parser.match(BREAK)
+	case lexer.BREAK:
+		parser.match(lexer.BREAK)
 		parser.match(';')
 		return NewBreak()
 	case '{':
@@ -164,7 +165,7 @@ func (parser *Parser) stmt() Stmter {
 func (parser *Parser) assign() Stmter {
 	var stmt Stmter
 	t := parser.look
-	parser.match(ID)
+	parser.match(lexer.ID)
 	id, err := parser.top.Get(t.String())
 	if err != nil {
 		parser.error(fmt.Sprintf("%s undeclared", t.String()))
@@ -184,7 +185,7 @@ func (parser *Parser) assign() Stmter {
 
 func (parser *Parser) bool() Exprer {
 	x := parser.join()
-	for parser.look.GetTokenTag() == OR {
+	for parser.look.GetTokenTag() == lexer.OR {
 		tok := parser.look
 		parser.move()
 		x = NewOr(tok, x, parser.join())
@@ -194,7 +195,7 @@ func (parser *Parser) bool() Exprer {
 
 func (parser *Parser) join() Exprer {
 	x := parser.equality()
-	for parser.look.GetTokenTag() == AND {
+	for parser.look.GetTokenTag() == lexer.AND {
 		tok := parser.look
 		parser.move()
 		x = NewAnd(tok, x, parser.equality())
@@ -204,7 +205,7 @@ func (parser *Parser) join() Exprer {
 
 func (parser *Parser) equality() Exprer {
 	x := parser.rel()
-	for parser.look.GetTokenTag() == EQ || parser.look.GetTokenTag() == NE {
+	for parser.look.GetTokenTag() == lexer.EQ || parser.look.GetTokenTag() == lexer.NE {
 		tok := parser.look
 		parser.move()
 		x = NewRel(tok, x, parser.rel())
@@ -216,7 +217,7 @@ func (parser *Parser) equality() Exprer {
 func (parser *Parser) rel() Exprer {
 	x := parser.expr()
 	switch parser.look.GetTokenTag() {
-	case '<', LE, GE, '>':
+	case '<', lexer.LE, lexer.GE, '>':
 		tok := parser.look
 		parser.move()
 		return NewRel(tok, x, parser.expr())
@@ -248,7 +249,7 @@ func (parser *Parser) term() Exprer {
 func (parser *Parser) unary() Exprer {
 	if parser.look.GetTokenTag() == '-' {
 		parser.move()
-		return NewUnary(WordMinus, parser.unary())
+		return NewUnary(lexer.WordMinus, parser.unary())
 	} else if parser.look.GetTokenTag() == '!' {
 		tok := parser.look
 		parser.move()
@@ -265,21 +266,21 @@ func (parser *Parser) factor() Exprer {
 		x := parser.bool()
 		parser.match(')')
 		return x
-	case NUM:
-		x := NewConstant(parser.look, Int)
+	case lexer.NUM:
+		x := NewConstant(parser.look, lexer.Int)
 		parser.move()
 		return x
-	case REAL:
-		x := NewConstant(parser.look, Float)
+	case lexer.REAL:
+		x := NewConstant(parser.look, lexer.Float)
 		parser.move()
 		return x
-	case TRUE:
+	case lexer.TRUE:
 		parser.move()
 		return ConstantTrue
-	case FALSE:
+	case lexer.FALSE:
 		parser.move()
 		return ConstantFalse
-	case ID:
+	case lexer.ID:
 		s := parser.look.String()
 		id, err := parser.top.Get(s)
 		if err != nil {
@@ -303,19 +304,19 @@ func (parser *Parser) offset(id *Id) Accesser {
 	parser.match('[')
 	i := parser.bool()
 	parser.match(']')
-	typed = typed.(Arrayer).GetType()
+	typed = typed.(lexer.Arrayer).GetType()
 	w = NewConstantInt(typed.GetWidth())
-	t1 = NewArith(NewToken('*'), i, w)
+	t1 = NewArith(lexer.NewToken('*'), i, w)
 	loc = t1
 
 	for parser.look.GetTokenTag() == '[' {
 		parser.match('[')
 		i = parser.bool()
 		parser.match(']')
-		typed = typed.(Arrayer).GetType()
+		typed = typed.(lexer.Arrayer).GetType()
 		w = NewConstantInt(typed.GetWidth())
-		t1 = NewArith(NewToken('*'), i, w)
-		t2 = NewArith(NewToken('+'), loc, t1)
+		t1 = NewArith(lexer.NewToken('*'), i, w)
+		t2 = NewArith(lexer.NewToken('+'), loc, t1)
 		loc = t2
 	}
 	return NewAccess(id, loc, typed)

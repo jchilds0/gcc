@@ -3,7 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"gcc/internal"
+	"gcc/lexer"
+	"gcc/parser"
 	"log"
 	"os"
 )
@@ -32,24 +33,20 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	file, err := os.Open(fmt.Sprintf("%s/%s", wd, filename))
+	inputFile, err := os.Open(fmt.Sprintf("%s/%s", wd, filename))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer file.Close()
-	r := bufio.NewReader(file)
+	defer inputFile.Close()
+	r := bufio.NewReader(inputFile)
 
-	file, err = os.Open(fmt.Sprintf("%s/%s", wd, output))
+	outputFile, err := os.Create(fmt.Sprintf("%s/%s", wd, output))
 	if err != nil {
-		file, err = os.Create(fmt.Sprintf("%s/%s", wd, output))
-		if err != nil {
-			log.Fatalln(err)
-		}
+		log.Fatalln(err)
 	}
-	defer file.Close()
-	w := bufio.NewWriter(file)
+	defer outputFile.Close()
 
-	lex := internal.NewLexer(r)
-	parser := internal.NewParser(lex, w)
-	parser.Program()
+	lex := lexer.NewLexer(r)
+	p := parser.NewParser(lex, outputFile)
+	p.Program()
 }

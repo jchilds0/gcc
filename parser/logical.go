@@ -1,6 +1,9 @@
-package internal
+package parser
 
-import "fmt"
+import (
+	"fmt"
+	"gcc/lexer"
+)
 
 type Logical struct {
 	Expr
@@ -8,7 +11,7 @@ type Logical struct {
 	expr2 Exprer
 }
 
-func NewLogical(tok Tokener, x1 Exprer, x2 Exprer) *Logical {
+func NewLogical(tok lexer.Tokener, x1 Exprer, x2 Exprer) *Logical {
 	logical := &Logical{expr1: x1, expr2: x2}
 	t := logical.check(x1.Type(), x2.Type())
 	logical.Expr = *NewExpr(tok, t)
@@ -19,9 +22,9 @@ func NewLogical(tok Tokener, x1 Exprer, x2 Exprer) *Logical {
 	return logical
 }
 
-func (_ *Logical) check(p1 Typer, p2 Typer) *Type {
-	if p1.String() == Bool.String() && p2.String() == Bool.String() {
-		return Bool
+func (_ *Logical) check(p1 lexer.Typer, p2 lexer.Typer) *lexer.Type {
+	if p1.String() == lexer.Bool.String() && p2.String() == lexer.Bool.String() {
+		return lexer.Bool
 	}
 	return nil
 }
@@ -48,7 +51,7 @@ type Or struct {
 	Logical
 }
 
-func NewOr(tok Tokener, x1 Exprer, x2 Exprer) *Or {
+func NewOr(tok lexer.Tokener, x1 Exprer, x2 Exprer) *Or {
 	return &Or{Logical: *NewLogical(tok, x1, x2)}
 }
 
@@ -71,7 +74,7 @@ type And struct {
 	Logical
 }
 
-func NewAnd(tok Tokener, x1 Exprer, x2 Exprer) *And {
+func NewAnd(tok lexer.Tokener, x1 Exprer, x2 Exprer) *And {
 	return &And{Logical: *NewLogical(tok, x1, x2)}
 }
 
@@ -94,7 +97,7 @@ type Not struct {
 	Logical
 }
 
-func NewNot(tok Tokener, x1 Exprer) *Not {
+func NewNot(tok lexer.Tokener, x1 Exprer) *Not {
 	return &Not{Logical: *NewLogical(tok, x1, x1)}
 }
 
@@ -110,7 +113,7 @@ type Rel struct {
 	Logical
 }
 
-func NewRel(tok Tokener, x1 Exprer, x2 Exprer) *Rel {
+func NewRel(tok lexer.Tokener, x1 Exprer, x2 Exprer) *Rel {
 	rel := &Rel{Logical: Logical{expr1: x1, expr2: x2}}
 	t := rel.check(x1.Type(), x2.Type())
 	rel.Logical.Expr = *NewExpr(tok, t)
@@ -121,13 +124,13 @@ func NewRel(tok Tokener, x1 Exprer, x2 Exprer) *Rel {
 	return rel
 }
 
-func (rel *Rel) check(p1 Typer, p2 Typer) *Type {
-	_, ok1 := p1.(Arrayer)
-	_, ok2 := p2.(Arrayer)
+func (rel *Rel) check(p1 lexer.Typer, p2 lexer.Typer) *lexer.Type {
+	_, ok1 := p1.(lexer.Arrayer)
+	_, ok2 := p2.(lexer.Arrayer)
 	if ok1 || ok2 {
 		return nil
 	} else if p1.String() == p2.String() && p1.GetWidth() == p2.GetWidth() {
-		return Bool
+		return lexer.Bool
 	} else {
 		return nil
 	}

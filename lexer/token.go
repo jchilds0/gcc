@@ -1,4 +1,4 @@
-package internal
+package lexer
 
 import (
 	"fmt"
@@ -109,7 +109,7 @@ func (t *Type) GetWidth() int {
 	return t.width
 }
 
-func max(p1 Typer, p2 Typer) *Type {
+func Max(p1 Typer, p2 Typer) *Type {
 	if !p1.Numeric() || !p2.Numeric() {
 		return nil
 	} else if p1 == Float || p2 == Float {
