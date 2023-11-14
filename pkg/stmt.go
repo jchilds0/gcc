@@ -144,7 +144,7 @@ func (_ *Set) check(p1 Typer, p2 Typer) Typer {
 }
 
 func (set *Set) Gen(b, a int) {
-	set.Emit(fmt.Sprintf("%s = %s", set.id.String(), set.expr.String()))
+	set.Emit(fmt.Sprintf("%s = %s", set.id.String(), set.expr.Gen().String()))
 }
 
 type SetElem struct {
@@ -178,8 +178,8 @@ func (_ *SetElem) check(p1 Typer, p2 Typer) Typer {
 }
 
 func (setElem *SetElem) Gen(b, a int) {
-	s1 := setElem.index.Reduce().String()
-	s2 := setElem.expr.Reduce().String()
+	s1 := setElem.index.Reduce(setElem.index).String()
+	s2 := setElem.expr.Reduce(setElem.expr).String()
 
 	setElem.Emit(fmt.Sprintf("%s [ %s ] = %s", setElem.array.String(), s1, s2))
 }

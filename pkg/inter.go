@@ -5,13 +5,14 @@ import (
 	"log"
 )
 
+var NodeLabels = 0
+
 type Node struct {
 	lexline int
-	labels  int
 }
 
 func NewNode() *Node {
-	return &Node{lexline: 0, labels: 0}
+	return &Node{lexline: 0}
 }
 
 func (node *Node) Error(s string) {
@@ -19,8 +20,8 @@ func (node *Node) Error(s string) {
 }
 
 func (node *Node) NewLabel() int {
-	node.labels++
-	return node.labels
+	NodeLabels++
+	return NodeLabels
 }
 
 func (node *Node) EmitLabel(i int) {
@@ -28,5 +29,5 @@ func (node *Node) EmitLabel(i int) {
 }
 
 func (node *Node) Emit(s string) {
-	fmt.Printf("\t%s", s)
+	fmt.Printf("\t%s\n", s)
 }

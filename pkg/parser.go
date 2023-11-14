@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 )
@@ -10,9 +11,10 @@ type Parser struct {
 	look Tokener
 	top  *Env
 	used int
+	w    *bufio.Writer
 }
 
-func NewParser(lexer *Lexer) *Parser {
+func NewParser(lexer *Lexer, write *bufio.Writer) *Parser {
 	parser := &Parser{lex: lexer}
 	parser.move()
 	parser.top = NewEnv(nil)
@@ -183,7 +185,7 @@ func (parser *Parser) assign() Stmter {
 func (parser *Parser) bool() Exprer {
 	x := parser.join()
 	for parser.look.GetTokenTag() == OR {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		x = NewOr(tok, x, parser.join())
 	}
@@ -193,7 +195,7 @@ func (parser *Parser) bool() Exprer {
 func (parser *Parser) join() Exprer {
 	x := parser.equality()
 	for parser.look.GetTokenTag() == AND {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		x = NewAnd(tok, x, parser.equality())
 	}
@@ -203,7 +205,7 @@ func (parser *Parser) join() Exprer {
 func (parser *Parser) equality() Exprer {
 	x := parser.rel()
 	for parser.look.GetTokenTag() == EQ || parser.look.GetTokenTag() == NE {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		x = NewRel(tok, x, parser.rel())
 	}
@@ -215,7 +217,7 @@ func (parser *Parser) rel() Exprer {
 	x := parser.expr()
 	switch parser.look.GetTokenTag() {
 	case '<', LE, GE, '>':
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		return NewRel(tok, x, parser.expr())
 	default:
@@ -226,7 +228,7 @@ func (parser *Parser) rel() Exprer {
 func (parser *Parser) expr() Exprer {
 	x := parser.term()
 	for parser.look.GetTokenTag() == '+' || parser.look.GetTokenTag() == '-' {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		x = NewArith(tok, x, parser.term())
 	}
@@ -236,7 +238,7 @@ func (parser *Parser) expr() Exprer {
 func (parser *Parser) term() Exprer {
 	x := parser.unary()
 	for parser.look.GetTokenTag() == '*' || parser.look.GetTokenTag() == '/' {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		x = NewArith(tok, x, parser.unary())
 	}
@@ -246,9 +248,9 @@ func (parser *Parser) term() Exprer {
 func (parser *Parser) unary() Exprer {
 	if parser.look.GetTokenTag() == '-' {
 		parser.move()
-		return NewUnary(&WordMinus.Token, parser.unary())
+		return NewUnary(WordMinus, parser.unary())
 	} else if parser.look.GetTokenTag() == '!' {
-		tok := NewToken(parser.look.GetTokenTag())
+		tok := parser.look
 		parser.move()
 		return NewNot(tok, parser.unary())
 	} else {
@@ -264,13 +266,11 @@ func (parser *Parser) factor() Exprer {
 		parser.match(')')
 		return x
 	case NUM:
-		tok := NewToken(parser.look.GetTokenTag())
-		x := NewConstant(tok, Int)
+		x := NewConstant(parser.look, Int)
 		parser.move()
 		return x
 	case REAL:
-		tok := NewToken(parser.look.GetTokenTag())
-		x := NewConstant(tok, Float)
+		x := NewConstant(parser.look, Float)
 		parser.move()
 		return x
 	case TRUE:

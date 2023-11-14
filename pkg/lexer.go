@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"unicode"
 )
@@ -27,6 +28,7 @@ const (
 	TEMP
 	TRUE
 	WHILE
+	EOF
 )
 
 type Lexer struct {
@@ -36,8 +38,8 @@ type Lexer struct {
 	words  map[string]Tokener
 }
 
-func NewLexer(reader *bufio.Reader) (lexer *Lexer) {
-	lexer = &Lexer{line: 1, peek: ' ', reader: reader, words: map[string]Tokener{}}
+func NewLexer(read *bufio.Reader) (lexer *Lexer) {
+	lexer = &Lexer{line: 1, peek: ' ', reader: read, words: map[string]Tokener{}}
 
 	// reserve words in the hash table
 	lexer.reserve(WordTrue)
@@ -65,7 +67,9 @@ func (lexer *Lexer) readch(b ...rune) bool {
 	if len(b) == 0 {
 		lexer.peek, _, err = lexer.reader.ReadRune()
 
-		if err != nil {
+		if err == io.EOF {
+			lexer.peek = EOF
+		} else if err != nil {
 			log.Fatal(err)
 		}
 	} else {
@@ -86,6 +90,8 @@ WS:
 		case ' ', '\t', '\r':
 		case '\n':
 			lexer.line++
+		case EOF:
+			return nil
 		default:
 			break WS
 		}

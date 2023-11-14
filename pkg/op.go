@@ -6,9 +6,9 @@ type Op struct {
 	Expr
 }
 
-func (op *Op) reduce() *Temp {
-	x := op.Gen()
-	t := NewTemp(op.Type())
+func (op *Op) Reduce(expr Exprer) Exprer {
+	x := expr.Gen()
+	t := NewTemp(expr.Type())
 	op.Emit(t.String() + " = " + x.String())
 	return t
 }
@@ -19,7 +19,7 @@ type Arith struct {
 	expr2 Exprer
 }
 
-func NewArith(tok *Token, x1 Exprer, x2 Exprer) *Arith {
+func NewArith(tok Tokener, x1 Exprer, x2 Exprer) *Arith {
 	arith := new(Arith)
 	t := max(x1.Type(), x2.Type())
 
@@ -35,7 +35,7 @@ func NewArith(tok *Token, x1 Exprer, x2 Exprer) *Arith {
 }
 
 func (arith *Arith) Gen() Exprer {
-	return NewArith(arith.op, arith.expr1.Reduce(), arith.expr2.Reduce())
+	return NewArith(arith.op, arith.expr1.Reduce(arith.expr1), arith.expr2.Reduce(arith.expr2))
 }
 
 func (arith *Arith) String() string {
@@ -47,7 +47,7 @@ type Unary struct {
 	expr Exprer
 }
 
-func NewUnary(tok *Token, x Exprer) (un *Unary) {
+func NewUnary(tok Tokener, x Exprer) (un *Unary) {
 	t := max(Int, x.Type())
 	if t == nil {
 		un.Error("type error")
@@ -59,7 +59,7 @@ func NewUnary(tok *Token, x Exprer) (un *Unary) {
 }
 
 func (unary *Unary) Gen() Exprer {
-	return NewUnary(unary.op, unary.expr.Reduce())
+	return NewUnary(unary.op, unary.expr.Reduce(unary.expr))
 }
 
 func (unary *Unary) String() string {
@@ -80,18 +80,18 @@ type Access struct {
 
 func NewAccess(a *Id, i Exprer, p Typer) *Access {
 	return &Access{
-		Op:    Op{Expr{op: &NewWord(INDEX, "[]").Token, t: p}},
+		Op:    Op{Expr: *NewExpr(NewWord(INDEX, "[]"), p)},
 		array: *a,
 		index: i,
 	}
 }
 
 func (access *Access) Gen() Exprer {
-	return NewAccess(&access.array, access.index.Reduce(), access.t)
+	return NewAccess(&access.array, access.index.Reduce(access.index), access.t)
 }
 
 func (access *Access) Jumping(t, f int) {
-	access.emitJumps(access.Reduce().String(), t, f)
+	access.emitJumps(access.Reduce(access).String(), t, f)
 }
 
 func (access *Access) String() string {

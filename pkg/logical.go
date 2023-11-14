@@ -8,12 +8,10 @@ type Logical struct {
 	expr2 Exprer
 }
 
-func NewLogical(tok *Token, x1 Exprer, x2 Exprer) *Logical {
-	logical := new(Logical)
+func NewLogical(tok Tokener, x1 Exprer, x2 Exprer) *Logical {
+	logical := &Logical{expr1: x1, expr2: x2}
 	t := logical.check(x1.Type(), x2.Type())
 	logical.Expr = *NewExpr(tok, t)
-	logical.expr1 = x1
-	logical.expr2 = x2
 
 	if t == nil {
 		logical.Error("type error")
@@ -50,7 +48,7 @@ type Or struct {
 	Logical
 }
 
-func NewOr(tok *Token, x1 Exprer, x2 Exprer) *Or {
+func NewOr(tok Tokener, x1 Exprer, x2 Exprer) *Or {
 	return &Or{Logical: *NewLogical(tok, x1, x2)}
 }
 
@@ -73,7 +71,7 @@ type And struct {
 	Logical
 }
 
-func NewAnd(tok *Token, x1 Exprer, x2 Exprer) *And {
+func NewAnd(tok Tokener, x1 Exprer, x2 Exprer) *And {
 	return &And{Logical: *NewLogical(tok, x1, x2)}
 }
 
@@ -96,7 +94,7 @@ type Not struct {
 	Logical
 }
 
-func NewNot(tok *Token, x1 Exprer) *Not {
+func NewNot(tok Tokener, x1 Exprer) *Not {
 	return &Not{Logical: *NewLogical(tok, x1, x1)}
 }
 
@@ -112,7 +110,7 @@ type Rel struct {
 	Logical
 }
 
-func NewRel(tok *Token, x1 Exprer, x2 Exprer) *Rel {
+func NewRel(tok Tokener, x1 Exprer, x2 Exprer) *Rel {
 	rel := &Rel{Logical: Logical{expr1: x1, expr2: x2}}
 	t := rel.check(x1.Type(), x2.Type())
 	rel.Logical.Expr = *NewExpr(tok, t)
@@ -136,8 +134,8 @@ func (rel *Rel) check(p1 Typer, p2 Typer) *Type {
 }
 
 func (rel *Rel) Jumping(t, f int) {
-	a := rel.expr1.Reduce()
-	b := rel.expr2.Reduce()
+	a := rel.expr1.Reduce(rel.expr1)
+	b := rel.expr2.Reduce(rel.expr2)
 	test := fmt.Sprintf("%s %s %s", a.String(), rel.op.String(), b.String())
 
 	rel.emitJumps(test, t, f)

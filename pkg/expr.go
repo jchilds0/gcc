@@ -6,7 +6,7 @@ import (
 
 type Exprer interface {
 	Gen() Exprer
-	Reduce() Exprer
+	Reduce(Exprer) Exprer
 	String() string
 	Type() Typer
 	Jumping(t, f int)
@@ -14,11 +14,11 @@ type Exprer interface {
 
 type Expr struct {
 	Node
-	op *Token
+	op Tokener
 	t  Typer
 }
 
-func NewExpr(tok *Token, p Typer) *Expr {
+func NewExpr(tok Tokener, p Typer) *Expr {
 	return &Expr{Node: *NewNode(), op: tok, t: p}
 }
 
@@ -26,7 +26,7 @@ func (expr *Expr) Gen() Exprer {
 	return expr
 }
 
-func (expr *Expr) Reduce() Exprer {
+func (_ *Expr) Reduce(expr Exprer) Exprer {
 	return expr
 }
 
@@ -59,33 +59,41 @@ type Id struct {
 }
 
 func NewId(id *Word, p Typer, b int) *Id {
-	return &Id{Expr: *NewExpr(&id.Token, p), offset: b}
+	return &Id{Expr: *NewExpr(id, p), offset: b}
 }
+
+var TempCount = 0
 
 type Temp struct {
 	Expr
-	count  int
 	number int
 }
 
 func NewTemp(p Typer) *Temp {
-	return &Temp{Expr: *NewExpr(&WordTemp.Token, p), count: 0, number: 1}
+	temp := &Temp{Expr: *NewExpr(WordTemp, p)}
+	TempCount++
+	temp.number = TempCount
+	return temp
+}
+
+func (temp *Temp) String() string {
+	return fmt.Sprintf("t%d", temp.number)
 }
 
 type Constant struct {
 	Expr
 }
 
-func NewConstant(tok *Token, p *Type) *Constant {
+func NewConstant(tok Tokener, p *Type) *Constant {
 	return &Constant{Expr: *NewExpr(tok, p)}
 }
 
 func NewConstantInt(i int) *Constant {
-	return &Constant{Expr: *NewExpr(&NewNum(i).Token, Int)}
+	return &Constant{Expr: *NewExpr(NewNum(i), Int)}
 }
 
-var ConstantTrue = NewConstant(&WordTrue.Token, Bool)
-var ConstantFalse = NewConstant(&WordFalse.Token, Bool)
+var ConstantTrue = NewConstant(WordTrue, Bool)
+var ConstantFalse = NewConstant(WordFalse, Bool)
 
 func (cons *Constant) Jumping(t int, f int) {
 	if cons == ConstantTrue && t != 0 {

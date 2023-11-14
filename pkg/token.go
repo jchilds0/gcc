@@ -1,6 +1,9 @@
 package pkg
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Tokener interface {
 	GetTokenTag() int
@@ -33,7 +36,7 @@ func NewNum(v int) *Num {
 }
 
 func (num *Num) String() string {
-	return string(num.value)
+	return fmt.Sprintf("%d", num.value)
 }
 
 type Word struct {
