@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"gcc/pkg"
+	"gcc/internal"
 	"log"
 	"os"
 )
@@ -49,7 +49,7 @@ func main() {
 	defer file.Close()
 	w := bufio.NewWriter(file)
 
-	lex := pkg.NewLexer(r)
-	parser := pkg.NewParser(lex, w)
+	lex := internal.NewLexer(r)
+	parser := internal.NewParser(lex, w)
 	parser.Program()
 }
