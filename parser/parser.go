@@ -39,6 +39,10 @@ func (parser *Parser) match(t int) {
 	}
 }
 
+/*
+	program -> block
+*/
+
 func (parser *Parser) Program() {
 	StmtNull = &Stmt{}
 	StmtEnclosing = &Stmt{}
@@ -51,6 +55,10 @@ func (parser *Parser) Program() {
 	s.GetNode().EmitLabel(after)
 }
 
+/*
+	block -> { decls stmts }
+*/
+
 func (parser *Parser) block() Stmter {
 	parser.match('{')
 	savedEnv := parser.top
@@ -61,6 +69,11 @@ func (parser *Parser) block() Stmter {
 	parser.top = savedEnv
 	return s
 }
+
+/*
+	decls -> decls decl | epsilon
+	decl  -> type id;
+*/
 
 func (parser *Parser) decls() {
 	for parser.look.GetTokenTag() == lexer.BASIC {
@@ -73,6 +86,10 @@ func (parser *Parser) decls() {
 		parser.used += p.GetWidth()
 	}
 }
+
+/*
+	type -> type [ num ] | basic
+*/
 
 func (parser *Parser) types() lexer.Typer {
 	p := lexer.NewType(parser.look.GetTokenTag(), parser.look.String(), parser.look.(lexer.Typer).GetWidth())
@@ -96,6 +113,10 @@ func (parser *Parser) dims(p lexer.Typer) lexer.Typer {
 	return lexer.NewArray(0, p)
 }
 
+/*
+	stmts -> stmts stmt | epsilon
+*/
+
 func (parser *Parser) stmts() Stmter {
 	if parser.look.GetTokenTag() == '}' {
 		return StmtNull
@@ -103,6 +124,16 @@ func (parser *Parser) stmts() Stmter {
 		return NewSeq(parser.stmt(), parser.stmts())
 	}
 }
+
+/*
+	stmt  -> loc = bool;
+		   | if ( bool ) stmt
+		   | if ( bool ) stmt else stmt
+		   | while ( bool ) stmt
+		   | do stmt while ( bool );
+		   | break ;
+		   | block
+*/
 
 func (parser *Parser) stmt() Stmter {
 	var x Exprer
@@ -162,6 +193,10 @@ func (parser *Parser) stmt() Stmter {
 	}
 }
 
+/*
+	loc -> loc [ bool ] | id
+*/
+
 func (parser *Parser) assign() Stmter {
 	var stmt Stmter
 	t := parser.look
@@ -183,6 +218,10 @@ func (parser *Parser) assign() Stmter {
 	return stmt
 }
 
+/*
+	bool -> bool || join | join
+*/
+
 func (parser *Parser) bool() Exprer {
 	x := parser.join()
 	for parser.look.GetTokenTag() == lexer.OR {
@@ -192,6 +231,10 @@ func (parser *Parser) bool() Exprer {
 	}
 	return x
 }
+
+/*
+	join -> join && equality | equality
+*/
 
 func (parser *Parser) join() Exprer {
 	x := parser.equality()
@@ -203,6 +246,10 @@ func (parser *Parser) join() Exprer {
 	return x
 }
 
+/*
+	equality -> equality == rel | equality != rel | rel
+*/
+
 func (parser *Parser) equality() Exprer {
 	x := parser.rel()
 	for parser.look.GetTokenTag() == lexer.EQ || parser.look.GetTokenTag() == lexer.NE {
@@ -213,6 +260,10 @@ func (parser *Parser) equality() Exprer {
 
 	return x
 }
+
+/*
+	rel -> expr < expr | expr <= expr | expr >= expr | expr > expr | expr
+*/
 
 func (parser *Parser) rel() Exprer {
 	x := parser.expr()
@@ -226,6 +277,10 @@ func (parser *Parser) rel() Exprer {
 	}
 }
 
+/*
+	expr -> expr + term | expr - term | term
+*/
+
 func (parser *Parser) expr() Exprer {
 	x := parser.term()
 	for parser.look.GetTokenTag() == '+' || parser.look.GetTokenTag() == '-' {
@@ -236,6 +291,10 @@ func (parser *Parser) expr() Exprer {
 	return x
 }
 
+/*
+	term -> term * unary | term / unary | unary
+*/
+
 func (parser *Parser) term() Exprer {
 	x := parser.unary()
 	for parser.look.GetTokenTag() == '*' || parser.look.GetTokenTag() == '/' {
@@ -245,6 +304,10 @@ func (parser *Parser) term() Exprer {
 	}
 	return x
 }
+
+/*
+	unary -> !unary | - unary | factor
+*/
 
 func (parser *Parser) unary() Exprer {
 	if parser.look.GetTokenTag() == '-' {
@@ -258,6 +321,10 @@ func (parser *Parser) unary() Exprer {
 		return parser.factor()
 	}
 }
+
+/*
+	factor -> ( bool ) | loc | num | real | true | false
+*/
 
 func (parser *Parser) factor() Exprer {
 	switch parser.look.GetTokenTag() {
